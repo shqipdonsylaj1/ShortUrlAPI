@@ -1,7 +1,11 @@
 ﻿using Microsoft.AspNetCore.Http;
 using Microsoft.AspNetCore.Mvc;
-using ShortUrlAPI.Model;
+using Microsoft.EntityFrameworkCore;
+using ShortUrlAPI.Data;
+using ShortUrlAPI.DTO;
+using ShortUrlAPI.Entities;
 using System;
+using System.Linq;
 using System.Net;
 using System.Threading.Tasks;
 
@@ -12,15 +16,18 @@ namespace ShortUrlAPI.Controllers
     public class ShortUrlController : ControllerBase
     {
         #region Properties
-
+        private readonly ApplicationDbContext _db;
         #endregion
 
         #region Constructor
-
+        public ShortUrlController(ApplicationDbContext db)
+        {
+            _db = db ?? throw new ArgumentNullException(nameof(db));
+        }
         #endregion
 
         #region publicMethod
-        [HttpPost("/short")]
+        [HttpPost]
         [ProducesResponseType((int)HttpStatusCode.OK)]
         public Task Create_Short_Url(string url)
         {
@@ -31,35 +38,31 @@ namespace ShortUrlAPI.Controllers
                 return context.Response.WriteAsync("Could not understand URL.");
             }
             var results = result.ToString();
-            var entry = new ShortLink
+            Random random = new Random();
+            var randomNumber = random.Next();
+            var longUrl = new LongUrl
             {
-                urlId = 123_456_789,
-                longUrl = results
+                UrlId = randomNumber,
+                Url = results
             };
-            var longsUrl = entry.getLongUrl();
+            _db.LongUrls.Add(longUrl);
+            var longsUrl = longUrl.getLongUrl();
             var responseUri = $"{context.Request.Scheme}://{context.Request.Host}/{longsUrl}";
-            return context.Response.WriteAsync(responseUri);
+            context.Response.WriteAsync(responseUri);
+            return _db.SaveChangesAsync();
         }
-        [HttpGet("/redirectUrl")]
+        [HttpGet]
         [ProducesResponseType((int)HttpStatusCode.OK)]
-        public Task Redirect_Url(string url)
+        public async Task<ActionResult<LongLinkDTO>> Redirect_Url(string shortUrl)
         {
             HttpContext context = HttpContext;
-            var entry = new ShortLink
+            var id = LongUrl.GetId(shortUrl.Substring(shortUrl.Length - 6));
+            var result = await _db.LongUrls.Where(x => x.UrlId == id).ToListAsync();
+            var longLink = new LongLinkDTO
             {
-                urlId = 123_456_789,
-                longUrl = url
+                Url = result.First().Url
             };
-            var shortUrl = entry.getLongUrl();
-            var path = context.Request.Path.ToUriComponent().Trim('/');
-            // Call method for find Id in db...
-            var id = ShortLink.GetId(shortUrl);
-            if (entry != null)
-                //context.Response.Redirect(entry.longUrl);
-                return context.Response.WriteAsync(entry.longUrl);
-            else
-                context.Response.Redirect("/");
-            return Task.CompletedTask;
+            return longLink;
         }
         #endregion
 

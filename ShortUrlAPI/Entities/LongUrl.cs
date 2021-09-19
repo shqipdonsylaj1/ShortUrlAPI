@@ -1,35 +1,32 @@
 ﻿using Microsoft.AspNetCore.WebUtilities;
 using System;
 using System.Collections.Generic;
+using System.ComponentModel.DataAnnotations;
 using System.Linq;
 using System.Threading.Tasks;
 
-namespace ShortUrlAPI.Model
+namespace ShortUrlAPI.Entities
 {
-    public class ShortLink
+    public class LongUrl
     {
         #region Properties
-        public int urlId { get; set; }
-        public string longUrl { get; set; }
-        #endregion
-
-        #region Constructor
-
+        [Key]
+        public int Id { get; set; }
+        [Required]
+        public int UrlId { get; set; }
+        [Required]
+        public string Url { get; set; }
         #endregion
 
         #region publicMethod
         public string getLongUrl()
         {
-            return WebEncoders.Base64UrlEncode(BitConverter.GetBytes(urlId));
+            return WebEncoders.Base64UrlEncode(BitConverter.GetBytes(UrlId));
         }
         public static int GetId(string longUrl)
         {
             return BitConverter.ToInt32(WebEncoders.Base64UrlDecode(longUrl));
         }
-        #endregion
-
-        #region privateMethod
-
         #endregion
     }
 }
